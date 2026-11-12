@@ -1,11 +1,11 @@
 # Golang Todo API
 
-Proyek belajar membangun REST API dengan Go dari nol menggunakan standard library `net/http` (`http.ServeMux`), MySQL, dan GORM.
+Proyek belajar membangun REST API dengan Go dari nol menggunakan framework [Gin](https://gin-gonic.com/), MySQL, dan GORM.
 
 ## Tech Stack
 
 - **Go** (`1.25.5`)
-- **HTTP Router:** `net/http` (`http.ServeMux`)
+- **Web Framework:** [Gin](https://gin-gonic.com/) (`github.com/gin-gonic/gin`)
 - **ORM:** [GORM](https://gorm.io/) (`gorm.io/gorm`)
 - **Database:** MySQL (`gorm.io/driver/mysql`)
 
@@ -51,7 +51,14 @@ todo-api/
 | :--- | :--- | :--- | :--- |
 | `GET` | `/health` | Cek status server | - |
 | `GET` | `/todos` | Ambil semua todo | - |
-| `GET` | `/todos/{id}` | Ambil detail todo berdasarkan ID | - |
+| `GET` | `/todos/:id` | Ambil detail todo berdasarkan ID | - |
 | `POST` | `/todos` | Tambah todo baru | `{"title": "Belajar Go"}` |
-| `PUT` | `/todos/{id}` | Update todo berdasarkan ID | `{"title": "Belajar Go", "done": true}` |
-| `DELETE` | `/todos/{id}` | Hapus todo berdasarkan ID | - |
+| `PUT` | `/todos/:id` | Update todo berdasarkan ID | `{"title": "Belajar Go", "done": true}` |
+| `DELETE` | `/todos/:id` | Hapus todo berdasarkan ID | - |
+
+## Checkpoint Belajar (Tags)
+
+- `v0.1.0-basic` — REST API dasar menggunakan `net/http` (`http.ServeMux`)
+- `v0.2.0-mysql-gorm` — Integrasi database MySQL dan GORM
+- `v0.3.0-gin` — Migrasi routing & handler ke framework Gin
+

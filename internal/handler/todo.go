@@ -1,13 +1,13 @@
 package handler
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/Adibmaros/todo-api/internal/model"
-	"github.com/Adibmaros/todo-api/internal/response"
+	"github.com/gin-gonic/gin"
 
 	"gorm.io/gorm"
 )
@@ -22,22 +22,22 @@ func NewTodoHandler(db *gorm.DB) *TodoHandler {
 	}
 }
 
-func (h *TodoHandler) Create(w http.ResponseWriter, r *http.Request) {
-	// deskripsiin input type
-
+func (h *TodoHandler) Create(c *gin.Context) {
 	var input struct {
 		Title string `json:"title"`
 	}
 
-	// ambil request dari body
-
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		response.Error(w, http.StatusBadRequest, "input tidak valid")
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "request body tidak valid",
+		})
 		return
 	}
 
-	if input.Title == "" {
-		response.Error(w, http.StatusBadRequest, "title harus diisi")
+	if strings.TrimSpace(input.Title) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "title harus diisi",
+		})
 		return
 	}
 
@@ -47,56 +47,66 @@ func (h *TodoHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.db.Create(&todo).Error; err != nil {
-		response.Error(w, http.StatusBadRequest, "gagal membuat todo")
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "gagal membuat data",
+		})
 		return
 	}
 
-	response.JSON(w, http.StatusCreated, todo)
+	c.JSON(http.StatusCreated, todo)
 }
 
-func (h *TodoHandler) List(w http.ResponseWriter, r *http.Request) {
+func (h *TodoHandler) List(c *gin.Context) {
 	var todos []model.Todo
 
 	if err := h.db.Find(&todos).Error; err != nil {
-		response.Error(w, http.StatusBadRequest, "gagal ambil data dari db")
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "gagal mengambil data",
+		})
 		return
 	}
 
-	response.JSON(w, http.StatusOK, todos)
+	c.JSON(http.StatusOK, todos)
 }
 
-func (h *TodoHandler) Get(w http.ResponseWriter, r *http.Request) {
-
-	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
-
+func parseIDParam(c *gin.Context) (int64, bool) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
-		response.Error(w, http.StatusBadRequest, "id tidak valid")
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "id tidak valid",
+		})
+		return 0, false
+	}
+	return id, true
+}
+
+func (h *TodoHandler) Get(c *gin.Context) {
+	id, ok := parseIDParam(c)
+	if !ok {
 		return
 	}
 
 	var todo model.Todo
-
-	err = h.db.First(&todo, id).Error
-
+	err := h.db.First(&todo, id).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		response.Error(w, http.StatusNotFound, "data tidak ditemukan")
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "data tidak ditemukan",
+		})
 		return
 	}
-
 	if err != nil {
-		response.Error(w, http.StatusBadRequest, "gagal ambil data todo")
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "gagal mengambil data",
+		})
 		return
 	}
 
-	response.JSON(w, http.StatusOK, todo)
-
+	c.JSON(http.StatusOK, todo)
 }
 
-func (h *TodoHandler) Update(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
-
-	if err != nil {
-		response.Error(w, http.StatusBadRequest, "invalid id type")
+func (h *TodoHandler) Update(c *gin.Context) {
+	id, ok := parseIDParam(c)
+	if !ok {
 		return
 	}
 
@@ -105,57 +115,71 @@ func (h *TodoHandler) Update(w http.ResponseWriter, r *http.Request) {
 		Done  bool   `json:"done"`
 	}
 
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		response.Error(w, http.StatusBadRequest, "request body gak valid")
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "request body tidak valid",
+		})
+		return
+	}
+
+	if strings.TrimSpace(input.Title) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "title harus diisi",
+		})
 		return
 	}
 
 	var todo model.Todo
-
 	if err := h.db.First(&todo, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			response.Error(w, http.StatusNotFound, "data tidak ditemukan")
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": "data tidak ditemukan",
+			})
 			return
 		}
-		response.Error(w, http.StatusInternalServerError, "gagal mengambil todo")
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "gagal mengambil data",
+		})
 		return
 	}
 
-	result := h.db.Model(&todo).Updates(map[string]interface{}{
+	result := h.db.Model(&todo).Updates(map[string]any{
 		"title": input.Title,
 		"done":  input.Done,
 	})
-
 	if result.Error != nil {
-		response.Error(w, http.StatusInternalServerError, "gagal simpan data")
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "gagal menyimpan data",
+		})
 		return
 	}
 
 	todo.Title = input.Title
 	todo.Done = input.Done
 
-	response.JSON(w, http.StatusOK, todo)
+	c.JSON(http.StatusOK, todo)
 }
 
-func (h *TodoHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
-
-	if err != nil {
-		response.Error(w, http.StatusBadRequest, "id tidak valid")
+func (h *TodoHandler) Delete(c *gin.Context) {
+	id, ok := parseIDParam(c)
+	if !ok {
 		return
 	}
 
 	result := h.db.Delete(&model.Todo{}, id)
-
 	if result.Error != nil {
-		response.Error(w, http.StatusBadRequest, "gagal menghapus data")
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "gagal menghapus data",
+		})
 		return
 	}
 
 	if result.RowsAffected == 0 {
-		response.Error(w, http.StatusNotFound, "data tidak ditemukan")
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "data tidak ditemukan",
+		})
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	c.Status(http.StatusNoContent)
 }

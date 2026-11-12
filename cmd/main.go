@@ -4,13 +4,21 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/Adibmaros/todo-api/internal/database"
 	"github.com/Adibmaros/todo-api/internal/handler"
+	"github.com/Adibmaros/todo-api/internal/model"
 )
 
 func main() {
 
+	db := database.Connect()
+
+	if err := db.AutoMigrate(&model.Todo{}); err != nil {
+		log.Fatal("migrasi gagal", err)
+	}
+
 	healthHandler := handler.NewHealthHandler()
-	todoHandler := handler.NewTodoHandler()
+	todoHandler := handler.NewTodoHandler(db)
 
 	mux := http.NewServeMux()
 
@@ -22,7 +30,6 @@ func main() {
 	mux.HandleFunc("DELETE /todos/{id}", todoHandler.Delete)
 
 	log.Println("berjalan di port 8080")
-
 	http.ListenAndServe(":8080", mux)
 
 }

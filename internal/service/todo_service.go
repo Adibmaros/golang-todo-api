@@ -4,6 +4,7 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/Adibmaros/todo-api/internal/dto"
 	"github.com/Adibmaros/todo-api/internal/model"
 	"github.com/Adibmaros/todo-api/internal/repository"
 )
@@ -15,7 +16,7 @@ var (
 
 type TodoService interface {
 	Create(userID int64, title string) (*model.Todo, error)
-	List(userID int64) ([]model.Todo, error)
+	List(userID int64, query dto.TodoQuery) (*dto.TodoListResponse, error)
 	GetByID(id, userID int64) (*model.Todo, error)
 	Update(id, userID int64, title string, done bool) (*model.Todo, error)
 	Delete(id, userID int64) error
@@ -47,8 +48,26 @@ func (s *todoService) Create(userID int64, title string) (*model.Todo, error) {
 	return todo, nil
 }
 
-func (s *todoService) List(userID int64) ([]model.Todo, error) {
-	return s.repo.FindAllByUserID(userID)
+func (s *todoService) List(userID int64, query dto.TodoQuery) (*dto.TodoListResponse, error) {
+	todos, totalData, err := s.repo.FindAllByUserID(userID, query)
+	if err != nil {
+		return nil, err
+	}
+
+	totalPages := 0
+	if totalData > 0 {
+		totalPages = int((totalData + int64(query.Limit) - 1) / int64(query.Limit))
+	}
+
+	return &dto.TodoListResponse{
+		Data: todos,
+		Meta: dto.PaginationMeta{
+			Page:      query.Page,
+			Limit:     query.Limit,
+			TotalData: totalData,
+			TotalPage: totalPages,
+		},
+	}, nil
 }
 
 func (s *todoService) GetByID(id, userID int64) (*model.Todo, error) {

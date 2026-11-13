@@ -48,9 +48,50 @@ func (h *TodoHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, todo)
 }
 
+func parseTodoQuery(c *gin.Context) (dto.TodoQuery, bool) {
+	page, err := strconv.Atoi(c.DefaultQuery("page", "1"))
+	if err != nil || page < 1 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "page harus berupa angka >= 1"})
+		return dto.TodoQuery{}, false
+	}
+
+	limit, err := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	if err != nil || limit < 1 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "limit harus berupa angka >= 1"})
+		return dto.TodoQuery{}, false
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	var donePtr *bool
+	if doneStr := c.Query("done"); doneStr != "" {
+		doneVal, err := strconv.ParseBool(doneStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "done harus bernilai true atau false"})
+			return dto.TodoQuery{}, false
+		}
+		donePtr = &doneVal
+	}
+
+	sort := c.DefaultQuery("sort", "created_at")
+
+	return dto.TodoQuery{
+		Page:  page,
+		Limit: limit,
+		Done:  donePtr,
+		Sort:  sort,
+	}, true
+}
+
 func (h *TodoHandler) List(c *gin.Context) {
+	query, ok := parseTodoQuery(c)
+	if !ok {
+		return
+	}
+
 	userID := c.GetInt64("user_id")
-	todos, err := h.service.List(userID)
+	res, err := h.service.List(userID, query)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "gagal mengambil data",
@@ -58,7 +99,7 @@ func (h *TodoHandler) List(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, todos)
+	c.JSON(http.StatusOK, res)
 }
 
 func parseIDParam(c *gin.Context) (int64, bool) {

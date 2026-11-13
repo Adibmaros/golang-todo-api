@@ -68,6 +68,26 @@ todo-api/
    ```
    Server akan berjalan di `http://localhost:8080` dan GORM `AutoMigrate` akan otomatis membuat tabel `users` dan `todos`.
 
+## Menjalankan Test
+
+Jalankan seluruh unit test & handler test:
+
+```powershell
+go test -v ./...
+```
+
+Untuk ikut menjalankan **integration test** ke database MySQL khusus test:
+1. Buat database test di MySQL, misalnya:
+   ```sql
+   CREATE DATABASE todo_db_test;
+   ```
+2. Set environment variable lalu jalankan `go test`:
+   ```powershell
+   $env:TEST_DB_NAME="todo_db_test"
+   go test -v ./...
+   ```
+   *(Opsional: gunakan `TEST_DB_HOST`, `TEST_DB_PORT`, `TEST_DB_USER`, `TEST_DB_PASS`, atau langsung `TEST_DB_DSN` jika konfigurasi berbeda dari default lokal `root@127.0.0.1:3306`.)*
+
 ## Daftar Endpoint
 
 ### Public

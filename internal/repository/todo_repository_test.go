@@ -118,4 +118,3 @@ func TestTodoRepository_Integration(t *testing.T) {
 		t.Fatalf("mengharapkan ErrNotFound saat hapus ulang, dapat: %v", err)
 	}
 }
-

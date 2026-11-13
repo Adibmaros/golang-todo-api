@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 
+	_ "github.com/Adibmaros/todo-api/docs"
 	"github.com/Adibmaros/todo-api/internal/database"
 	"github.com/Adibmaros/todo-api/internal/handler"
 	"github.com/Adibmaros/todo-api/internal/middleware"
@@ -11,7 +12,18 @@ import (
 	"github.com/Adibmaros/todo-api/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
+
+// @title                       Golang Todo API
+// @version                     1.0
+// @description                 REST API Todo dengan Gin, MySQL, GORM, dan autentikasi JWT.
+// @BasePath                    /
+// @securityDefinitions.apikey  BearerAuth
+// @in                          header
+// @name                        Authorization
+// @description                 Masukkan token dengan format: Bearer <token>
 
 func main() {
 
@@ -37,6 +49,7 @@ func main() {
 	r := gin.Default()
 
 	r.GET("/health", healthHandler.Check)
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	r.POST("/auth/register", authHandler.Register)
 	r.POST("/auth/login", authHandler.Login)
 	todos := r.Group("/todos", middleware.Auth())

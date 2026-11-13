@@ -17,6 +17,17 @@ func NewAuthHandler(s service.AuthService) *AuthHandler {
 	return &AuthHandler{service: s}
 }
 
+// Register godoc
+// @Summary      Registrasi user baru
+// @Description  Mendaftarkan akun user baru dengan email dan password
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        request  body      dto.RegisterRequest  true  "Data registrasi"
+// @Success      201      {object}  model.User
+// @Failure      400      {object}  map[string]string
+// @Failure      409      {object}  map[string]string
+// @Router       /auth/register [post]
 func (h *AuthHandler) Register(c *gin.Context) {
 	var input dto.RegisterRequest
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -37,6 +48,17 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	c.JSON(http.StatusCreated, user)
 }
 
+// Login godoc
+// @Summary      Login user
+// @Description  Autentikasi user dan mengembalikan JWT token
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        request  body      dto.LoginRequest  true  "Kredensial login"
+// @Success      200      {object}  map[string]string
+// @Failure      400      {object}  map[string]string
+// @Failure      401      {object}  map[string]string
+// @Router       /auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	var input dto.LoginRequest
 	if err := c.ShouldBindJSON(&input); err != nil {

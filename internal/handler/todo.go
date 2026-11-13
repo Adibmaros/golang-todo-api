@@ -20,6 +20,18 @@ func NewTodoHandler(s service.TodoService) *TodoHandler {
 	}
 }
 
+// Create godoc
+// @Summary      Buat todo baru
+// @Description  Membuat todo baru milik user yang sedang login
+// @Tags         todos
+// @Security     BearerAuth
+// @Accept       json
+// @Produce      json
+// @Param        request  body      dto.CreateTodoRequest  true  "Data todo"
+// @Success      201      {object}  model.Todo
+// @Failure      400      {object}  map[string]string
+// @Failure      401      {object}  map[string]string
+// @Router       /todos [post]
 func (h *TodoHandler) Create(c *gin.Context) {
 	var input dto.CreateTodoRequest
 
@@ -84,6 +96,20 @@ func parseTodoQuery(c *gin.Context) (dto.TodoQuery, bool) {
 	}, true
 }
 
+// List godoc
+// @Summary      Daftar todo
+// @Description  Mengambil daftar todo milik user dengan pagination, filter, dan sorting
+// @Tags         todos
+// @Security     BearerAuth
+// @Produce      json
+// @Param        page   query     int     false  "Nomor halaman (default 1)"
+// @Param        limit  query     int     false  "Jumlah data per halaman (default 10, maks 100)"
+// @Param        done   query     bool    false  "Filter status selesai (true/false)"
+// @Param        sort   query     string  false  "Urutan (created_at, created_asc, title, done)"
+// @Success      200    {object}  dto.TodoListResponse
+// @Failure      400    {object}  map[string]string
+// @Failure      401    {object}  map[string]string
+// @Router       /todos [get]
 func (h *TodoHandler) List(c *gin.Context) {
 	query, ok := parseTodoQuery(c)
 	if !ok {
@@ -113,6 +139,18 @@ func parseIDParam(c *gin.Context) (int64, bool) {
 	return id, true
 }
 
+// Get godoc
+// @Summary      Detail todo
+// @Description  Mengambil detail todo berdasarkan ID milik user yang sedang login
+// @Tags         todos
+// @Security     BearerAuth
+// @Produce      json
+// @Param        id   path      int  true  "ID Todo"
+// @Success      200  {object}  model.Todo
+// @Failure      400  {object}  map[string]string
+// @Failure      401  {object}  map[string]string
+// @Failure      404  {object}  map[string]string
+// @Router       /todos/{id} [get]
 func (h *TodoHandler) Get(c *gin.Context) {
 	id, ok := parseIDParam(c)
 	if !ok {
@@ -137,6 +175,20 @@ func (h *TodoHandler) Get(c *gin.Context) {
 	c.JSON(http.StatusOK, todo)
 }
 
+// Update godoc
+// @Summary      Update todo
+// @Description  Memperbarui judul dan status selesai todo milik user
+// @Tags         todos
+// @Security     BearerAuth
+// @Accept       json
+// @Produce      json
+// @Param        id       path      int                    true  "ID Todo"
+// @Param        request  body      dto.UpdateTodoRequest  true  "Data update todo"
+// @Success      200      {object}  model.Todo
+// @Failure      400      {object}  map[string]string
+// @Failure      401      {object}  map[string]string
+// @Failure      404      {object}  map[string]string
+// @Router       /todos/{id} [put]
 func (h *TodoHandler) Update(c *gin.Context) {
 	id, ok := parseIDParam(c)
 	if !ok {
@@ -176,6 +228,18 @@ func (h *TodoHandler) Update(c *gin.Context) {
 	c.JSON(http.StatusOK, todo)
 }
 
+// Delete godoc
+// @Summary      Hapus todo
+// @Description  Menghapus todo berdasarkan ID milik user yang sedang login
+// @Tags         todos
+// @Security     BearerAuth
+// @Produce      json
+// @Param        id   path  int  true  "ID Todo"
+// @Success      204  "No Content"
+// @Failure      400  {object}  map[string]string
+// @Failure      401  {object}  map[string]string
+// @Failure      404  {object}  map[string]string
+// @Router       /todos/{id} [delete]
 func (h *TodoHandler) Delete(c *gin.Context) {
 	id, ok := parseIDParam(c)
 	if !ok {

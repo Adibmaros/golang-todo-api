@@ -1,32 +1,51 @@
 # Golang Todo API
 
-Proyek belajar membangun REST API dengan Go dari nol menggunakan framework [Gin](https://gin-gonic.com/), MySQL, dan GORM.
+Proyek membangun REST API dengan Go menggunakan framework [Gin](https://gin-gonic.com/), MySQL, GORM, dan autentikasi JWT.
 
 ## Tech Stack
 
-- **Go** (`1.25.5`)
+- **Go** (`1.26.0`)
 - **Web Framework:** [Gin](https://gin-gonic.com/) (`github.com/gin-gonic/gin`)
-- **ORM:** [GORM](https://gorm.io/) (`gorm.io/gorm`)
-- **Database:** MySQL (`gorm.io/driver/mysql`)
+- **ORM & Database:** [GORM](https://gorm.io/) (`gorm.io/gorm`) & MySQL (`gorm.io/driver/mysql`)
+- **Konfigurasi:** `github.com/joho/godotenv`
+- **Validasi:** `github.com/go-playground/validator/v10`
+- **Autentikasi:** JWT (`github.com/golang-jwt/jwt/v5`) & Bcrypt (`golang.org/x/crypto/bcrypt`)
 
 ## Struktur Proyek
 
 ```text
 todo-api/
 ├── cmd/
-│   └── main.go                 # Entry point aplikasi & routing
+│   └── main.go                      # Entry point aplikasi, dependency wiring & routing
 ├── internal/
+│   ├── auth/
+│   │   └── jwt.go                   # Helper generate & parse token JWT
 │   ├── database/
-│   │   └── mysql.go            # Koneksi database MySQL via GORM
+│   │   └── mysql.go                 # Koneksi database MySQL via GORM
+│   ├── dto/
+│   │   ├── auth.go                  # Request DTO untuk register & login
+│   │   └── todo.go                  # Request/response DTO Todo & pagination
 │   ├── handler/
-│   │   ├── health.go           # Handler health check
-│   │   └── todo.go             # Handler CRUD Todo
+│   │   ├── auth.go                  # Handler register & login
+│   │   ├── health.go                # Handler health check
+│   │   ├── todo.go                  # Handler CRUD Todo
+│   │   └── validation.go            # Helper format error validasi
+│   ├── middleware/
+│   │   └── auth.go                  # Middleware verifikasi JWT
 │   ├── model/
-│   │   └── todo.go             # Struct & schema model Todo
-│   └── response/
-│       └── response.go         # Helper response JSON & error
+│   │   ├── todo.go                  # Model Todo (relasi UserID)
+│   │   └── user.go                  # Model User
+│   ├── repository/
+│   │   ├── todo_repository.go       # Query database Todo (filter, sort, pagination)
+│   │   └── user_repository.go       # Query database User
+│   ├── response/
+│   │   └── response.go              # Helper response JSON & error
+│   └── service/
+│       ├── auth_service.go          # Business logic register, login & bcrypt
+│       └── todo_service.go          # Business logic Todo & perhitungan pagination
 ├── migrations/
-│   └── init.sql                # SQL pembuatan database awal
+│   └── init.sql                     # SQL pembuatan database awal
+├── .env.example                     # Template environment variable
 ├── .gitignore
 ├── go.mod
 └── go.sum
@@ -38,27 +57,41 @@ todo-api/
    ```sql
    CREATE DATABASE todo_db;
    ```
-2. **Sesuaikan konfigurasi koneksi** di `internal/database/mysql.go` jika username, password, atau port MySQL berbeda (default saat ini menggunakan user `root` tanpa password).
+2. **Konfigurasi environment variable:**
+   Salin `.env.example` menjadi `.env`, lalu sesuaikan nilainya (koneksi database, `APP_PORT`, dan `JWT_SECRET`):
+   ```powershell
+   copy .env.example .env
+   ```
 3. **Jalankan server:**
-   ```bash
+   ```powershell
    go run ./cmd/main.go
    ```
-   Server akan berjalan di `http://localhost:8080` dan GORM `AutoMigrate` akan otomatis membuat tabel `todos`.
+   Server akan berjalan di `http://localhost:8080` dan GORM `AutoMigrate` akan otomatis membuat tabel `users` dan `todos`.
 
 ## Daftar Endpoint
+
+### Public
 
 | Method | Endpoint | Deskripsi | Contoh Body |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/health` | Cek status server | - |
-| `GET` | `/todos` | Ambil semua todo | - |
+| `POST` | `/auth/register` | Registrasi user baru | `{"email": "user@mail.com", "password": "secret123"}` |
+| `POST` | `/auth/login` | Login & dapatkan JWT | `{"email": "user@mail.com", "password": "secret123"}` |
+
+### Protected (`/todos`)
+
+Semua endpoint `/todos` wajib menyertakan header `Authorization: Bearer <token>` dan hanya mengakses data milik user yang sedang login.
+
+| Method | Endpoint | Deskripsi | Contoh Body / Query |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/todos` | Ambil daftar todo (pagination, filter, sort) | `?page=1&limit=10&done=false&sort=created_at` |
 | `GET` | `/todos/:id` | Ambil detail todo berdasarkan ID | - |
 | `POST` | `/todos` | Tambah todo baru | `{"title": "Belajar Go"}` |
 | `PUT` | `/todos/:id` | Update todo berdasarkan ID | `{"title": "Belajar Go", "done": true}` |
 | `DELETE` | `/todos/:id` | Hapus todo berdasarkan ID | - |
 
-## Checkpoint Belajar (Tags)
-
-- `v0.1.0-basic` — REST API dasar menggunakan `net/http` (`http.ServeMux`)
-- `v0.2.0-mysql-gorm` — Integrasi database MySQL dan GORM
-- `v0.3.0-gin` — Migrasi routing & handler ke framework Gin
-
+**Query Parameter `GET /todos`:**
+- `page` (opsional, default `1`): nomor halaman (`>= 1`)
+- `limit` (opsional, default `10`, maks `100`): jumlah data per halaman
+- `done` (opsional): filter status selesai (`true` / `false`)
+- `sort` (opsional, default `created_at`): urutan data (`created_at`, `created_asc`, `title`, `done`)

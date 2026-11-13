@@ -7,9 +7,15 @@ import (
 	"github.com/Adibmaros/todo-api/internal/handler"
 	"github.com/Adibmaros/todo-api/internal/model"
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+
+	if err := godotenv.Load(); err != nil {
+		log.Println("file .env tidak ditemukan")
+	}
+
 	db := database.Connect()
 
 	if err := db.AutoMigrate(&model.Todo{}); err != nil {

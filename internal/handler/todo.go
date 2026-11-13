@@ -4,20 +4,18 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
-	"strings"
 
-	"github.com/Adibmaros/todo-api/internal/model"
+	"github.com/Adibmaros/todo-api/internal/service"
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
 type TodoHandler struct {
-	db *gorm.DB
+	service service.TodoService
 }
 
-func NewTodoHandler(db *gorm.DB) *TodoHandler {
+func NewTodoHandler(s service.TodoService) *TodoHandler {
 	return &TodoHandler{
-		db: db,
+		service: s,
 	}
 }
 
@@ -33,20 +31,15 @@ func (h *TodoHandler) Create(c *gin.Context) {
 		return
 	}
 
-	if strings.TrimSpace(input.Title) == "" {
+	todo, err := h.service.Create(input.Title)
+	if errors.Is(err, service.ErrTitleRequired) {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "title harus diisi",
+			"error": err.Error(),
 		})
 		return
 	}
-
-	todo := model.Todo{
-		Title: input.Title,
-		Done:  false,
-	}
-
-	if err := h.db.Create(&todo).Error; err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "gagal membuat data",
 		})
 		return
@@ -56,10 +49,9 @@ func (h *TodoHandler) Create(c *gin.Context) {
 }
 
 func (h *TodoHandler) List(c *gin.Context) {
-	var todos []model.Todo
-
-	if err := h.db.Find(&todos).Error; err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
+	todos, err := h.service.List()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "gagal mengambil data",
 		})
 		return
@@ -85,11 +77,10 @@ func (h *TodoHandler) Get(c *gin.Context) {
 		return
 	}
 
-	var todo model.Todo
-	err := h.db.First(&todo, id).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
+	todo, err := h.service.GetByID(id)
+	if errors.Is(err, service.ErrTodoNotFound) {
 		c.JSON(http.StatusNotFound, gin.H{
-			"error": "data tidak ditemukan",
+			"error": err.Error(),
 		})
 		return
 	}
@@ -121,40 +112,25 @@ func (h *TodoHandler) Update(c *gin.Context) {
 		return
 	}
 
-	if strings.TrimSpace(input.Title) == "" {
+	todo, err := h.service.Update(id, input.Title, input.Done)
+	if errors.Is(err, service.ErrTitleRequired) {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "title harus diisi",
+			"error": err.Error(),
 		})
 		return
 	}
-
-	var todo model.Todo
-	if err := h.db.First(&todo, id).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{
-				"error": "data tidak ditemukan",
-			})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "gagal mengambil data",
+	if errors.Is(err, service.ErrTodoNotFound) {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": err.Error(),
 		})
 		return
 	}
-
-	result := h.db.Model(&todo).Updates(map[string]any{
-		"title": input.Title,
-		"done":  input.Done,
-	})
-	if result.Error != nil {
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "gagal menyimpan data",
 		})
 		return
 	}
-
-	todo.Title = input.Title
-	todo.Done = input.Done
 
 	c.JSON(http.StatusOK, todo)
 }
@@ -165,17 +141,16 @@ func (h *TodoHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	result := h.db.Delete(&model.Todo{}, id)
-	if result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "gagal menghapus data",
+	err := h.service.Delete(id)
+	if errors.Is(err, service.ErrTodoNotFound) {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": err.Error(),
 		})
 		return
 	}
-
-	if result.RowsAffected == 0 {
-		c.JSON(http.StatusNotFound, gin.H{
-			"error": "data tidak ditemukan",
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "gagal menghapus data",
 		})
 		return
 	}

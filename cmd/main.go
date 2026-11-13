@@ -6,6 +6,8 @@ import (
 	"github.com/Adibmaros/todo-api/internal/database"
 	"github.com/Adibmaros/todo-api/internal/handler"
 	"github.com/Adibmaros/todo-api/internal/model"
+	"github.com/Adibmaros/todo-api/internal/repository"
+	"github.com/Adibmaros/todo-api/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
@@ -23,7 +25,9 @@ func main() {
 	}
 
 	healthHandler := handler.NewHealthHandler()
-	todoHandler := handler.NewTodoHandler(db)
+	todoRepo := repository.NewTodoRepository(db)
+	todoService := service.NewTodoService(todoRepo)
+	todoHandler := handler.NewTodoHandler(todoService)
 
 	r := gin.Default()
 

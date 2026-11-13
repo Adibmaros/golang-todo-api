@@ -68,6 +68,21 @@ todo-api/
    ```
    Server akan berjalan di `http://localhost:8080` dan GORM `AutoMigrate` akan otomatis membuat tabel `users` dan `todos`.
 
+### Menjalankan via Docker
+
+Pastikan Docker dan Docker Compose sudah terpasang, lalu jalankan:
+
+```powershell
+copy .env.example .env
+docker compose up --build
+```
+
+Perintah tersebut akan membangun image Go API (multi-stage build) dan menjalankan container `mysql` beserta `api` secara otomatis. Untuk menghentikan container:
+
+```powershell
+docker compose down
+```
+
 ## Menjalankan Test
 
 Jalankan seluruh unit test & handler test:

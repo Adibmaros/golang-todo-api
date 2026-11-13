@@ -1,7 +1,14 @@
 package main
 
 import (
-	"log"
+	"context"
+	"errors"
+	"log/slog"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	_ "github.com/Adibmaros/todo-api/docs"
 	"github.com/Adibmaros/todo-api/internal/database"
@@ -26,18 +33,21 @@ import (
 // @description                 Masukkan token dengan format: Bearer <token>
 
 func main() {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
 
 	if err := godotenv.Load(); err != nil {
-		log.Println("file .env tidak ditemukan")
+		slog.Info("file .env tidak ditemukan, menggunakan environment variable sistem")
 	}
 
 	db := database.Connect()
 
 	if err := db.AutoMigrate(&model.Todo{}, &model.User{}); err != nil {
-		log.Fatal("migrasi gagal", err)
+		slog.Error("migrasi gagal", "error", err)
+		os.Exit(1)
 	}
 
-	healthHandler := handler.NewHealthHandler()
+	healthHandler := handler.NewHealthHandler(db)
 	todoRepo := repository.NewTodoRepository(db)
 	todoService := service.NewTodoService(todoRepo)
 	todoHandler := handler.NewTodoHandler(todoService)
@@ -47,6 +57,8 @@ func main() {
 	authHandler := handler.NewAuthHandler(authService)
 
 	r := gin.Default()
+	r.Use(middleware.CORS())
+	r.Use(middleware.RateLimit(60, time.Minute))
 
 	r.GET("/health", healthHandler.Check)
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -61,8 +73,37 @@ func main() {
 		todos.DELETE("/:id", todoHandler.Delete)
 	}
 
-	log.Println("berjalan di port 8080")
-	if err := r.Run(":8080"); err != nil {
-		log.Fatal("server gagal berjalan", err)
+	port := os.Getenv("APP_PORT")
+	if port == "" {
+		port = "8080"
 	}
+
+	srv := &http.Server{
+		Addr:    ":" + port,
+		Handler: r,
+	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	go func() {
+		slog.Info("server berjalan", "port", port)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			slog.Error("server gagal berjalan", "error", err)
+			os.Exit(1)
+		}
+	}()
+
+	<-ctx.Done()
+	slog.Info("menerima sinyal shutdown, menghentikan server...")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		slog.Error("shutdown server gagal", "error", err)
+		os.Exit(1)
+	}
+
+	slog.Info("server berhenti dengan aman")
 }

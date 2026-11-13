@@ -14,11 +14,11 @@ var (
 )
 
 type TodoService interface {
-	Create(title string) (*model.Todo, error)
-	List() ([]model.Todo, error)
-	GetByID(id int64) (*model.Todo, error)
-	Update(id int64, title string, done bool) (*model.Todo, error)
-	Delete(id int64) error
+	Create(userID int64, title string) (*model.Todo, error)
+	List(userID int64) ([]model.Todo, error)
+	GetByID(id, userID int64) (*model.Todo, error)
+	Update(id, userID int64, title string, done bool) (*model.Todo, error)
+	Delete(id, userID int64) error
 }
 
 type todoService struct {
@@ -29,14 +29,15 @@ func NewTodoService(repo repository.TodoRepository) TodoService {
 	return &todoService{repo: repo}
 }
 
-func (s *todoService) Create(title string) (*model.Todo, error) {
+func (s *todoService) Create(userID int64, title string) (*model.Todo, error) {
 	if strings.TrimSpace(title) == "" {
 		return nil, ErrTitleRequired
 	}
 
 	todo := &model.Todo{
-		Title: title,
-		Done:  false,
+		UserID: userID,
+		Title:  title,
+		Done:   false,
 	}
 
 	if err := s.repo.Create(todo); err != nil {
@@ -46,12 +47,12 @@ func (s *todoService) Create(title string) (*model.Todo, error) {
 	return todo, nil
 }
 
-func (s *todoService) List() ([]model.Todo, error) {
-	return s.repo.FindAll()
+func (s *todoService) List(userID int64) ([]model.Todo, error) {
+	return s.repo.FindAllByUserID(userID)
 }
 
-func (s *todoService) GetByID(id int64) (*model.Todo, error) {
-	todo, err := s.repo.FindByID(id)
+func (s *todoService) GetByID(id, userID int64) (*model.Todo, error) {
+	todo, err := s.repo.FindByIDAndUserID(id, userID)
 	if errors.Is(err, repository.ErrNotFound) {
 		return nil, ErrTodoNotFound
 	}
@@ -61,12 +62,12 @@ func (s *todoService) GetByID(id int64) (*model.Todo, error) {
 	return todo, nil
 }
 
-func (s *todoService) Update(id int64, title string, done bool) (*model.Todo, error) {
+func (s *todoService) Update(id, userID int64, title string, done bool) (*model.Todo, error) {
 	if strings.TrimSpace(title) == "" {
 		return nil, ErrTitleRequired
 	}
 
-	todo, err := s.repo.FindByID(id)
+	todo, err := s.repo.FindByIDAndUserID(id, userID)
 	if errors.Is(err, repository.ErrNotFound) {
 		return nil, ErrTodoNotFound
 	}
@@ -84,8 +85,8 @@ func (s *todoService) Update(id int64, title string, done bool) (*model.Todo, er
 	return todo, nil
 }
 
-func (s *todoService) Delete(id int64) error {
-	err := s.repo.Delete(id)
+func (s *todoService) Delete(id, userID int64) error {
+	err := s.repo.DeleteByIDAndUserID(id, userID)
 	if errors.Is(err, repository.ErrNotFound) {
 		return ErrTodoNotFound
 	}

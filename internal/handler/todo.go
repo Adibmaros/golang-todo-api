@@ -30,7 +30,8 @@ func (h *TodoHandler) Create(c *gin.Context) {
 		return
 	}
 
-	todo, err := h.service.Create(input.Title)
+	userID := c.GetInt64("user_id")
+	todo, err := h.service.Create(userID, input.Title)
 	if errors.Is(err, service.ErrTitleRequired) {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": err.Error(),
@@ -48,7 +49,8 @@ func (h *TodoHandler) Create(c *gin.Context) {
 }
 
 func (h *TodoHandler) List(c *gin.Context) {
-	todos, err := h.service.List()
+	userID := c.GetInt64("user_id")
+	todos, err := h.service.List(userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "gagal mengambil data",
@@ -76,7 +78,8 @@ func (h *TodoHandler) Get(c *gin.Context) {
 		return
 	}
 
-	todo, err := h.service.GetByID(id)
+	userID := c.GetInt64("user_id")
+	todo, err := h.service.GetByID(id, userID)
 	if errors.Is(err, service.ErrTodoNotFound) {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": err.Error(),
@@ -108,7 +111,8 @@ func (h *TodoHandler) Update(c *gin.Context) {
 		return
 	}
 
-	todo, err := h.service.Update(id, input.Title, input.Done)
+	userID := c.GetInt64("user_id")
+	todo, err := h.service.Update(id, userID, input.Title, input.Done)
 	if errors.Is(err, service.ErrTitleRequired) {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": err.Error(),
@@ -137,7 +141,8 @@ func (h *TodoHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	err := h.service.Delete(id)
+	userID := c.GetInt64("user_id")
+	err := h.service.Delete(id, userID)
 	if errors.Is(err, service.ErrTodoNotFound) {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": err.Error(),

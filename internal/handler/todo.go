@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/Adibmaros/todo-api/internal/dto"
 	"github.com/Adibmaros/todo-api/internal/service"
 	"github.com/gin-gonic/gin"
 )
@@ -20,9 +21,7 @@ func NewTodoHandler(s service.TodoService) *TodoHandler {
 }
 
 func (h *TodoHandler) Create(c *gin.Context) {
-	var input struct {
-		Title string `json:"title"`
-	}
+	var input dto.CreateTodoRequest
 
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -100,10 +99,7 @@ func (h *TodoHandler) Update(c *gin.Context) {
 		return
 	}
 
-	var input struct {
-		Title string `json:"title"`
-		Done  bool   `json:"done"`
-	}
+	var input dto.UpdateTodoRequest
 
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{

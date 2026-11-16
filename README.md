@@ -1,6 +1,9 @@
-# Golang Todo API
+# Golang Todo App (Full-Stack)
 
-Proyek membangun REST API dengan Go menggunakan framework [Gin](https://gin-gonic.com/), MySQL, GORM, autentikasi JWT, dan dokumentasi Swagger.
+Aplikasi Todo full-stack menggunakan **Go** ([Gin](https://gin-gonic.com/), GORM, MySQL, JWT, Swagger) di sisi backend, **Vue 3 + Vite** di sisi frontend, serta dibungkus dengan **Docker Compose** dan **Caddy** reverse proxy.
+
+- **Live App:** https://todo.adibmaros.web.id
+- **Swagger Docs:** https://todo.adibmaros.web.id/api/swagger/index.html
 
 ## Tech Stack
 

@@ -36,6 +36,14 @@ function handleUnauthorized() {
   todos.value = []
 }
 
+function formatDate(iso) {
+  if (!iso) return ''
+  return new Date(iso).toLocaleDateString('id-ID', {
+    day: 'numeric',
+    month: 'short',
+  })
+}
+
 async function checkHealth() {
   try {
     const res = await api.health()
@@ -75,7 +83,7 @@ async function submitAuth() {
   try {
     if (authMode.value === 'register') {
       await api.register(authForm.email, authForm.password)
-      authSuccess.value = 'Registrasi berhasil! Silakan login.'
+      authSuccess.value = 'Akun berhasil dibuat. Silakan login.'
       authMode.value = 'login'
       authForm.password = ''
     } else {
@@ -165,7 +173,13 @@ async function removeTodo(id) {
   }
 }
 
-function changeFilter() {
+function setStatusFilter(val) {
+  filters.done = val
+  meta.page = 1
+  loadTodos()
+}
+
+function changeSort() {
   meta.page = 1
   loadTodos()
 }
@@ -184,156 +198,246 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="container">
-    <header class="header">
-      <div class="brand">
-        <h1>Todo App</h1>
-        <p>Golang + Gin + MySQL + Vue.js</p>
-      </div>
-      <div class="header-right">
-        <span class="badge">
-          <span class="dot" :class="healthStatus"></span>
-          API: {{ healthStatus === 'up' ? 'Online' : healthStatus === 'down' ? 'Offline' : '...' }}
-        </span>
-        <template v-if="token">
-          <span class="badge">{{ userEmail || 'Authenticated' }}</span>
-          <button class="btn btn-secondary btn-sm" @click="logout">Logout</button>
-        </template>
-      </div>
-    </header>
+  <!-- Auth Layout: Centered, Clean & Focused -->
+  <div v-if="!token" class="auth-shell">
+    <div class="auth-status">
+      <span class="status-pill">
+        <span class="dot" :class="healthStatus"></span>
+        API {{ healthStatus === 'up' ? 'Online' : healthStatus === 'down' ? 'Offline' : '...' }}
+      </span>
+    </div>
 
-    <section v-if="!token" class="card auth-card">
-      <div class="tabs">
-        <button
-          class="tab-btn"
-          :class="{ active: authMode === 'login' }"
-          @click="authMode = 'login'; authError = ''"
-        >
-          Login
-        </button>
-        <button
-          class="tab-btn"
-          :class="{ active: authMode === 'register' }"
-          @click="authMode = 'register'; authError = ''"
-        >
-          Register
-        </button>
-      </div>
-
-      <div v-if="authError" class="alert alert-error">{{ authError }}</div>
-      <div v-if="authSuccess" class="alert alert-success">{{ authSuccess }}</div>
-
-      <form @submit.prevent="submitAuth">
-        <div class="form-group">
-          <label for="email">Email</label>
-          <input
-            id="email"
-            v-model="authForm.email"
-            type="email"
-            placeholder="nama@email.com"
-            required
-          />
+    <div class="auth-wrapper">
+      <div class="auth-brand">
+        <div class="logo-mark" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
         </div>
-        <div class="form-group">
-          <label for="password">Password</label>
-          <input
-            id="password"
-            v-model="authForm.password"
-            type="password"
-            placeholder="Minimal 6 karakter"
-            required
-          />
-        </div>
-        <button class="btn btn-primary full-width" :disabled="authLoading">
-          {{ authLoading ? 'Memproses...' : authMode === 'login' ? 'Masuk' : 'Daftar' }}
-        </button>
-      </form>
-    </section>
+        <h1>Todo</h1>
+        <p>Kelola tugas harian Anda dengan rapi dan fokus.</p>
+      </div>
 
-    <section v-else class="card">
-      <form class="add-form" @submit.prevent="createTodo">
+      <div class="card auth-card">
+        <div class="tabs">
+          <button
+            type="button"
+            class="tab-btn"
+            :class="{ active: authMode === 'login' }"
+            @click="authMode = 'login'; authError = ''"
+          >
+            Masuk
+          </button>
+          <button
+            type="button"
+            class="tab-btn"
+            :class="{ active: authMode === 'register' }"
+            @click="authMode = 'register'; authError = ''"
+          >
+            Daftar
+          </button>
+        </div>
+
+        <div v-if="authError" class="alert alert-error">{{ authError }}</div>
+        <div v-if="authSuccess" class="alert alert-success">{{ authSuccess }}</div>
+
+        <form @submit.prevent="submitAuth">
+          <div class="form-group">
+            <label for="email">Email</label>
+            <input
+              id="email"
+              v-model="authForm.email"
+              type="email"
+              placeholder="nama@email.com"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="password">Password</label>
+            <input
+              id="password"
+              v-model="authForm.password"
+              type="password"
+              placeholder="Minimal 6 karakter"
+              required
+            />
+          </div>
+          <button class="btn btn-primary full-width" :disabled="authLoading">
+            {{ authLoading ? 'Memproses...' : authMode === 'login' ? 'Masuk' : 'Buat Akun' }}
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dashboard Layout: Top Navbar + Clean Workspace -->
+  <div v-else class="app-shell">
+    <nav class="navbar">
+      <div class="navbar-inner">
+        <div class="nav-brand">
+          <div class="logo-mark sm" aria-hidden="true">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </div>
+          <span>Todo</span>
+        </div>
+
+        <div class="nav-right">
+          <span class="status-pill">
+            <span class="dot" :class="healthStatus"></span>
+            API {{ healthStatus === 'up' ? 'Online' : healthStatus === 'down' ? 'Offline' : '...' }}
+          </span>
+          <span class="user-chip">{{ userEmail || 'User' }}</span>
+          <button class="btn btn-ghost btn-sm" @click="logout">Keluar</button>
+        </div>
+      </div>
+    </nav>
+
+    <main class="workspace">
+      <div class="workspace-head">
+        <div>
+          <h2>Daftar Tugas</h2>
+          <p class="subtitle">Total {{ meta.total_data }} tugas tersimpan</p>
+        </div>
+      </div>
+
+      <form class="composer" @submit.prevent="createTodo">
         <input
           v-model="newTitle"
           type="text"
-          placeholder="Tambah todo baru (minimal 3 karakter)..."
+          placeholder="Tulis tugas baru (min. 3 karakter)..."
           minlength="3"
           maxlength="100"
           required
         />
-        <button class="btn btn-primary" type="submit">Tambah</button>
+        <button class="btn btn-primary" type="submit">+ Tambah</button>
       </form>
 
       <div class="toolbar">
-        <select v-model="filters.done" @change="changeFilter">
-          <option value="">Semua Status</option>
-          <option value="false">Belum Selesai</option>
-          <option value="true">Selesai</option>
-        </select>
+        <div class="filter-pills" role="tablist">
+          <button
+            type="button"
+            class="pill-btn"
+            :class="{ active: filters.done === '' }"
+            @click="setStatusFilter('')"
+          >
+            Semua
+          </button>
+          <button
+            type="button"
+            class="pill-btn"
+            :class="{ active: filters.done === 'false' }"
+            @click="setStatusFilter('false')"
+          >
+            Aktif
+          </button>
+          <button
+            type="button"
+            class="pill-btn"
+            :class="{ active: filters.done === 'true' }"
+            @click="setStatusFilter('true')"
+          >
+            Selesai
+          </button>
+        </div>
 
-        <select v-model="filters.sort" @change="changeFilter">
-          <option value="created_at">Terbaru</option>
-          <option value="created_asc">Terlama</option>
-          <option value="title">Judul (A-Z)</option>
-          <option value="done">Status</option>
-        </select>
+        <div class="sort-wrap">
+          <label for="sort">Urutkan</label>
+          <select id="sort" v-model="filters.sort" @change="changeSort">
+            <option value="created_at">Terbaru</option>
+            <option value="created_asc">Terlama</option>
+            <option value="title">Judul (A-Z)</option>
+            <option value="done">Status</option>
+          </select>
+        </div>
       </div>
 
       <div v-if="actionError" class="alert alert-error">{{ actionError }}</div>
 
-      <div v-if="listLoading" class="empty">Memuat data...</div>
-      <div v-else-if="todos.length === 0" class="empty">
-        Belum ada todo untuk ditampilkan.
-      </div>
-      <ul v-else class="todo-list">
-        <li v-for="todo in todos" :key="todo.id" class="todo-item">
-          <div class="todo-left">
-            <input
-              type="checkbox"
-              :checked="todo.done"
-              @change="toggleDone(todo)"
-            />
-            <template v-if="editingId === todo.id">
-              <input v-model="editingTitle" type="text" @keyup.enter="saveEdit(todo)" />
-            </template>
-            <template v-else>
-              <span class="todo-title" :class="{ done: todo.done }">{{ todo.title }}</span>
-            </template>
-          </div>
+      <div class="card list-card">
+        <div v-if="listLoading" class="empty">Memuat daftar tugas...</div>
 
-          <div class="todo-actions">
-            <template v-if="editingId === todo.id">
-              <button class="btn btn-primary btn-sm" @click="saveEdit(todo)">Simpan</button>
-              <button class="btn btn-secondary btn-sm" @click="cancelEdit">Batal</button>
-            </template>
-            <template v-else>
-              <button class="btn btn-secondary btn-sm" @click="startEdit(todo)">Edit</button>
-              <button class="btn btn-danger btn-sm" @click="removeTodo(todo.id)">Hapus</button>
-            </template>
+        <div v-else-if="todos.length === 0" class="empty">
+          <div class="empty-icon" aria-hidden="true">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="3" />
+              <path d="M9 12l2 2 4-4" />
+            </svg>
           </div>
-        </li>
-      </ul>
+          <p class="empty-title">Belum ada tugas</p>
+          <p class="empty-desc">Tambahkan tugas pertama Anda di kolom atas.</p>
+        </div>
 
-      <div class="pagination">
-        <span>
-          Halaman {{ meta.page }} dari {{ meta.total_pages || 1 }} ({{ meta.total_data }} total)
-        </span>
-        <div class="pagination-controls">
-          <button
-            class="btn btn-secondary btn-sm"
-            :disabled="meta.page <= 1"
-            @click="goToPage(meta.page - 1)"
-          >
-            Sebelumnya
-          </button>
-          <button
-            class="btn btn-secondary btn-sm"
-            :disabled="meta.page >= meta.total_pages"
-            @click="goToPage(meta.page + 1)"
-          >
-            Berikutnya
-          </button>
+        <ul v-else class="todo-list">
+          <li v-for="todo in todos" :key="todo.id" class="todo-row">
+            <div class="todo-left">
+              <button
+                type="button"
+                class="check-btn"
+                :class="{ checked: todo.done }"
+                :aria-label="todo.done ? 'Tandai belum selesai' : 'Tandai selesai'"
+                @click="toggleDone(todo)"
+              >
+                <svg v-if="todo.done" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              </button>
+
+              <template v-if="editingId === todo.id">
+                <input
+                  v-model="editingTitle"
+                  type="text"
+                  class="inline-edit"
+                  @keyup.enter="saveEdit(todo)"
+                  @keyup.esc="cancelEdit"
+                />
+              </template>
+              <template v-else>
+                <span class="todo-title" :class="{ done: todo.done }">{{ todo.title }}</span>
+              </template>
+            </div>
+
+            <div class="todo-right">
+              <span v-if="editingId !== todo.id && todo.created_at" class="todo-date">
+                {{ formatDate(todo.created_at) }}
+              </span>
+              <div class="todo-actions">
+                <template v-if="editingId === todo.id">
+                  <button class="btn btn-primary btn-sm" @click="saveEdit(todo)">Simpan</button>
+                  <button class="btn btn-ghost btn-sm" @click="cancelEdit">Batal</button>
+                </template>
+                <template v-else>
+                  <button class="btn btn-ghost btn-sm" @click="startEdit(todo)">Edit</button>
+                  <button class="btn btn-danger-ghost btn-sm" @click="removeTodo(todo.id)">Hapus</button>
+                </template>
+              </div>
+            </div>
+          </li>
+        </ul>
+
+        <div v-if="meta.total_data > 0" class="pagination">
+          <span>
+            Halaman {{ meta.page }} dari {{ meta.total_pages || 1 }}
+          </span>
+          <div class="pagination-controls">
+            <button
+              class="btn btn-secondary btn-sm"
+              :disabled="meta.page <= 1"
+              @click="goToPage(meta.page - 1)"
+            >
+              Sebelumnya
+            </button>
+            <button
+              class="btn btn-secondary btn-sm"
+              :disabled="meta.page >= meta.total_pages"
+              @click="goToPage(meta.page + 1)"
+            >
+              Berikutnya
+            </button>
+          </div>
         </div>
       </div>
-    </section>
+    </main>
   </div>
 </template>

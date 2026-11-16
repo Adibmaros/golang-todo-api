@@ -60,6 +60,13 @@ func main() {
 	r.Use(middleware.CORS())
 	r.Use(middleware.RateLimit(60, time.Minute))
 
+	r.GET("/", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Golang Todo API",
+			"docs":    "/swagger/index.html",
+			"health":  "/health",
+		})
+	})
 	r.GET("/health", healthHandler.Check)
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	r.POST("/auth/register", authHandler.Register)

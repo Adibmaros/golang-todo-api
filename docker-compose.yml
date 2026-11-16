@@ -7,7 +7,7 @@ services:
       MYSQL_ROOT_PASSWORD: ${DB_PASS:-secret}
       MYSQL_DATABASE: ${DB_NAME:-todo_db}
     ports:
-      - "${DB_PORT:-3306}:3306"
+      - "${DB_PORT:-3307}:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
@@ -32,11 +32,22 @@ services:
       DB_USER: root
       DB_PASS: ${DB_PASS:-secret}
       DB_NAME: ${DB_NAME:-todo_db}
-      APP_PORT: ${APP_PORT:-8080}
+      APP_PORT: 8080
       JWT_SECRET: ${JWT_SECRET:-rahasia-super-aman-ganti-di-production}
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
     ports:
-      - "${APP_PORT:-8080}:8080"
+      - "${APP_PORT:-8081}:8080"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: todo-frontend
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "${FRONTEND_PORT:-3001}:80"
 
 volumes:
   mysql_data:
-

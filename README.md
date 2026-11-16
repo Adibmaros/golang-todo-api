@@ -96,10 +96,14 @@ Pastikan Docker dan Docker Compose sudah terpasang, lalu jalankan:
 
 ```powershell
 copy .env.example .env
-docker compose up --build
+docker compose up -d --build
 ```
 
-Perintah tersebut akan membangun image Go API (multi-stage build) dan menjalankan container `mysql` beserta `api` secara otomatis. Untuk menghentikan container:
+Perintah tersebut akan menjalankan 3 container: `mysql`, `api` (port `8081`), dan `frontend` Vue.js + Nginx (port `3001`).
+- Akses UI di `http://localhost:3001`
+- Contoh konfigurasi Caddy untuk domain `todo.adibmaros.web.id` tersedia di `deploy/Caddyfile.example`
+
+Untuk menghentikan container:
 
 ```powershell
 docker compose down

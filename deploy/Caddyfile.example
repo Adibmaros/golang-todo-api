@@ -1,0 +1,13 @@
+todo.adibmaros.web.id {
+    encode gzip
+
+    handle_path /api/* {
+        reverse_proxy 127.0.0.1:8081 {
+            flush_interval -1
+        }
+    }
+
+    handle {
+        reverse_proxy 127.0.0.1:3001
+    }
+}

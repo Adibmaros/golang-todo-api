@@ -102,6 +102,11 @@ async function submitAuth() {
   }
 }
 
+function fillDemoAccount() {
+  authForm.email = 'coba@gmail.com'
+  authForm.password = 'coba123'
+}
+
 function logout() {
   clearAuth()
   handleUnauthorized()
@@ -251,6 +256,16 @@ onMounted(() => {
 
         <div v-if="authError" class="alert alert-error">{{ authError }}</div>
         <div v-if="authSuccess" class="alert alert-success">{{ authSuccess }}</div>
+
+        <div v-if="authMode === 'login'" class="demo-box">
+          <div class="demo-info">
+            <span class="demo-label">Akun Demo</span>
+            <code>coba@gmail.com</code> / <code>coba123</code>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" @click="fillDemoAccount">
+            Isi Otomatis
+          </button>
+        </div>
 
         <form @submit.prevent="submitAuth">
           <div class="form-group">

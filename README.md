@@ -1,6 +1,6 @@
 # Golang Todo API
 
-Proyek membangun REST API dengan Go menggunakan framework [Gin](https://gin-gonic.com/), MySQL, GORM, dan autentikasi JWT.
+Proyek membangun REST API dengan Go menggunakan framework [Gin](https://gin-gonic.com/), MySQL, GORM, autentikasi JWT, dan dokumentasi Swagger.
 
 ## Tech Stack
 
@@ -10,43 +10,65 @@ Proyek membangun REST API dengan Go menggunakan framework [Gin](https://gin-goni
 - **Konfigurasi:** `github.com/joho/godotenv`
 - **Validasi:** `github.com/go-playground/validator/v10`
 - **Autentikasi:** JWT (`github.com/golang-jwt/jwt/v5`) & Bcrypt (`golang.org/x/crypto/bcrypt`)
+- **Dokumentasi API:** Swagger/OpenAPI (`github.com/swaggo/swag`, `github.com/swaggo/gin-swagger`, `github.com/swaggo/files`)
+- **Containerization:** Docker & Docker Compose
+
+## Fitur Production Readiness
+
+- **Graceful Shutdown** (`http.Server` + signal handling `SIGINT` / `SIGTERM`)
+- **Structured Logging** menggunakan `log/slog` (JSON format)
+- **Database Connection Pooling** (`SetMaxIdleConns`, `SetMaxOpenConns`, `SetConnMaxLifetime`)
+- **Middleware CORS & Rate Limiting** (`60` request/menit per IP)
+- **Health Check Database** (`PingContext` ke MySQL pada `GET /health`)
 
 ## Struktur Proyek
 
 ```text
 todo-api/
 ├── cmd/
-│   └── main.go                      # Entry point aplikasi, dependency wiring & routing
+│   └── main.go                      # Entry point, wiring, routing & graceful shutdown
+├── docs/
+│   ├── docs.go                      # Swagger generated docs
+│   ├── swagger.json                 # OpenAPI spec (JSON)
+│   └── swagger.yaml                 # OpenAPI spec (YAML)
 ├── internal/
 │   ├── auth/
 │   │   └── jwt.go                   # Helper generate & parse token JWT
 │   ├── database/
-│   │   └── mysql.go                 # Koneksi database MySQL via GORM
+│   │   └── mysql.go                 # Koneksi database MySQL & connection pooling
 │   ├── dto/
 │   │   ├── auth.go                  # Request DTO untuk register & login
 │   │   └── todo.go                  # Request/response DTO Todo & pagination
 │   ├── handler/
 │   │   ├── auth.go                  # Handler register & login
-│   │   ├── health.go                # Handler health check
+│   │   ├── health.go                # Handler health check & DB ping
 │   │   ├── todo.go                  # Handler CRUD Todo
+│   │   ├── todo_test.go             # HTTP handler test (httptest)
 │   │   └── validation.go            # Helper format error validasi
 │   ├── middleware/
-│   │   └── auth.go                  # Middleware verifikasi JWT
+│   │   ├── auth.go                  # Middleware verifikasi JWT
+│   │   ├── cors.go                  # Middleware CORS
+│   │   └── ratelimit.go             # Middleware rate limiter per IP
 │   ├── model/
 │   │   ├── todo.go                  # Model Todo (relasi UserID)
-│   │   └── user.go                  # Model User
+│   │   └── user.go                  # Model User (relasi Todos)
 │   ├── repository/
 │   │   ├── todo_repository.go       # Query database Todo (filter, sort, pagination)
+│   │   ├── todo_repository_test.go  # Integration test MySQL
 │   │   └── user_repository.go       # Query database User
 │   ├── response/
 │   │   └── response.go              # Helper response JSON & error
 │   └── service/
 │       ├── auth_service.go          # Business logic register, login & bcrypt
-│       └── todo_service.go          # Business logic Todo & perhitungan pagination
+│       ├── todo_service.go          # Business logic Todo & perhitungan pagination
+│       └── todo_service_test.go     # Unit test TodoService
 ├── migrations/
 │   └── init.sql                     # SQL pembuatan database awal
+├── .dockerignore
 ├── .env.example                     # Template environment variable
 ├── .gitignore
+├── docker-compose.yml
+├── Dockerfile
 ├── go.mod
 └── go.sum
 ```
@@ -83,6 +105,22 @@ Perintah tersebut akan membangun image Go API (multi-stage build) dan menjalanka
 docker compose down
 ```
 
+## Dokumentasi API (Swagger)
+
+Saat server berjalan, buka Swagger UI di browser melalui:
+
+```text
+http://localhost:8080/swagger/index.html
+```
+
+Untuk menguji endpoint `/todos`, login melalui `POST /auth/login` terlebih dahulu, lalu klik tombol **Authorize** di Swagger UI dan masukkan `Bearer <token>`.
+
+Jika mengubah anotasi Swagger pada handler atau `cmd/main.go`, generate ulang dokumentasi dengan:
+
+```powershell
+go run github.com/swaggo/swag/cmd/swag init -g cmd/main.go
+```
+
 ## Menjalankan Test
 
 Jalankan seluruh unit test & handler test:
@@ -109,7 +147,9 @@ Untuk ikut menjalankan **integration test** ke database MySQL khusus test:
 
 | Method | Endpoint | Deskripsi | Contoh Body |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/health` | Cek status server | - |
+| `GET` | `/` | Informasi dasar API | - |
+| `GET` | `/health` | Cek status server & koneksi database | - |
+| `GET` | `/swagger/*any` | Dokumentasi interaktif Swagger UI | - |
 | `POST` | `/auth/register` | Registrasi user baru | `{"email": "user@mail.com", "password": "secret123"}` |
 | `POST` | `/auth/login` | Login & dapatkan JWT | `{"email": "user@mail.com", "password": "secret123"}` |
 

@@ -11,6 +11,7 @@ Proyek membangun REST API dengan Go menggunakan framework [Gin](https://gin-goni
 - **Validasi:** `github.com/go-playground/validator/v10`
 - **Autentikasi:** JWT (`github.com/golang-jwt/jwt/v5`) & Bcrypt (`golang.org/x/crypto/bcrypt`)
 - **Dokumentasi API:** Swagger/OpenAPI (`github.com/swaggo/swag`, `github.com/swaggo/gin-swagger`, `github.com/swaggo/files`)
+- **Frontend:** Vue 3 + Vite (disajikan via Nginx pada Docker)
 - **Containerization:** Docker & Docker Compose
 
 ## Fitur Production Readiness
@@ -27,10 +28,22 @@ Proyek membangun REST API dengan Go menggunakan framework [Gin](https://gin-goni
 todo-api/
 ├── cmd/
 │   └── main.go                      # Entry point, wiring, routing & graceful shutdown
+├── deploy/
+│   └── Caddyfile.example            # Contoh konfigurasi reverse proxy Caddy
 ├── docs/
 │   ├── docs.go                      # Swagger generated docs
 │   ├── swagger.json                 # OpenAPI spec (JSON)
 │   └── swagger.yaml                 # OpenAPI spec (YAML)
+├── frontend/
+│   ├── src/
+│   │   ├── App.vue                  # Halaman Login/Register & Dashboard Todo
+│   │   ├── api.js                   # Client fetch & manajemen JWT
+│   │   ├── main.js
+│   │   └── style.css                # Styling light mode
+│   ├── Dockerfile                   # Multi-stage build Node + Nginx
+│   ├── nginx.conf                   # SPA fallback & proxy /api ke backend
+│   ├── package.json
+│   └── vite.config.js               # Dev proxy /api ke backend lokal
 ├── internal/
 │   ├── auth/
 │   │   └── jwt.go                   # Helper generate & parse token JWT
@@ -84,11 +97,18 @@ todo-api/
    ```powershell
    copy .env.example .env
    ```
-3. **Jalankan server:**
+3. **Jalankan backend:**
    ```powershell
    go run ./cmd/main.go
    ```
-   Server akan berjalan di `http://localhost:8080` dan GORM `AutoMigrate` akan otomatis membuat tabel `users` dan `todos`.
+   Server akan berjalan sesuai `APP_PORT` di `.env` (atau `http://localhost:8080` jika default) dan GORM `AutoMigrate` akan otomatis membuat tabel `users` dan `todos`.
+4. **Jalankan frontend (opsional, untuk development lokal):**
+   ```powershell
+   cd frontend
+   npm install
+   npm run dev
+   ```
+   Frontend dev server berjalan di `http://localhost:3001` dengan proxy `/api` ke `http://localhost:8080`.
 
 ### Menjalankan via Docker
 

@@ -42,7 +42,7 @@ func main() {
 
 	db := database.Connect()
 
-	if err := db.AutoMigrate(&model.Todo{}, &model.User{}); err != nil {
+	if err := db.AutoMigrate(&model.User{}, &model.Todo{}); err != nil {
 		slog.Error("migrasi gagal", "error", err)
 		os.Exit(1)
 	}
